@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Z-OLD — загрузка</title>
+<!--
+  Экран загрузки Z-OLD (стиль ZCity 2025).
+  Как подключить: загрузить этот файл на любой хостинг (например GitHub Pages)
+  и в server.cfg прописать:  sv_loadingurl "https://ваш-адрес/index.html"
+  Всё в одном файле, без внешних скриптов. Написано на простом CSS и старом JS,
+  чтобы работало и в старом браузере GMod (Awesomium), и в новом (Chromium).
+-->
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+    background: #0a0a13;
+    color: #e1e1e1;
+    font-family: "Bahnschrift", "Segoe UI", Arial, sans-serif;
+  }
+  /* фон: тёмно-синий как в меню ZCity + красное свечение снизу */
+  #bg {
+    position: absolute; left: 0; top: 0; right: 0; bottom: 0;
+    background: #0a0a13;
+    background: -webkit-linear-gradient(left, rgba(10,10,19,1) 0%, rgba(10,10,19,0.85) 55%, rgba(25,8,12,0.9) 100%);
+    background: linear-gradient(to right, rgba(10,10,19,1) 0%, rgba(10,10,19,0.85) 55%, rgba(25,8,12,0.9) 100%);
+  }
+  #glow {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 45%;
+    background: -webkit-linear-gradient(bottom, rgba(155,0,0,0.25) 0%, rgba(155,0,0,0) 100%);
+    background: linear-gradient(to top, rgba(155,0,0,0.25) 0%, rgba(155,0,0,0) 100%);
+  }
+  /* тонкие полосы, как на старом мониторе */
+  #lines {
+    position: absolute; left: 0; top: 0; right: 0; bottom: 0; opacity: 0.06;
+    background: repeating-linear-gradient(0deg, #fff 0px, #fff 1px, transparent 1px, transparent 3px);
+  }
+
+  #wrap { position: absolute; left: 6%; top: 9%; right: 6%; bottom: 7%; }
+
+  /* заголовок как в ESC-меню: красная Z, белое -OLD */
+  #title { font-size: 120px; font-weight: bold; line-height: 1; letter-spacing: 2px; margin: 0; }
+  #title .z { color: #ff0f0f; text-shadow: 0 0 25px rgba(255,15,15,0.45); }
+  #sub { font-size: 30px; margin-top: 8px; color: #e1e1e1; }
+  #sub .year { color: #ff3232; }
+  #server { font-size: 20px; margin-top: 18px; color: #9a9aa8; }
+
+  /* плашка «извините за контент» */
+  .card {
+    background: rgba(15,15,25,0.86);
+    border: 1px solid rgba(155,0,0,0.8);
+    border-left: 4px solid #ff1919;
+    padding: 16px 20px;
+    margin-top: 28px;
+    width: 58%;
+    font-size: 20px;
+    line-height: 1.45;
+  }
+  .card b { color: #ff3c3c; }
+  .card .small { font-size: 15px; color: #9a9aa8; margin-top: 6px; }
+
+  /* дисклеймер справа */
+  #disclaimer {
+    position: absolute; right: 0; top: 0; width: 30%;
+    background: rgba(15,15,25,0.86);
+    border: 1px solid rgba(155,0,0,0.6);
+    padding: 16px 18px;
+    font-size: 14px; line-height: 1.5; color: #b9b9c4;
+  }
+  #disclaimer h3 { margin: 0 0 8px 0; font-size: 17px; color: #ff3c3c; letter-spacing: 1px; }
+  #disclaimer p { margin: 0 0 8px 0; }
+
+  /* совет дня */
+  #tip { position: absolute; left: 0; bottom: 118px; width: 58%; font-size: 18px; color: #c8c8d2; }
+  #tip span { color: #ff3c3c; font-weight: bold; }
+
+  /* загрузка: статус, файл, полоса прогресса */
+  #loader { position: absolute; left: 0; right: 0; bottom: 0; }
+  #status { font-size: 22px; margin-bottom: 6px; }
+  #status .pct { color: #ff3c3c; float: right; }
+  #file { font-size: 14px; color: #7f7f8c; height: 18px; overflow: hidden; white-space: nowrap; margin-bottom: 10px; }
+  #bar { height: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(155,0,0,0.7); }
+  #fill {
+    height: 100%; width: 0%;
+    background: #9b0000;
+    background: -webkit-linear-gradient(left, #6e0000, #ff1919);
+    background: linear-gradient(to right, #6e0000, #ff1919);
+    -webkit-transition: width 0.4s; transition: width 0.4s;
+  }
+  #footer { margin-top: 10px; font-size: 14px; color: #6f6f7c; }
+  #footer .ds { color: #8a9cff; }
+  #footer .by { float: right; }
+
+  /* мигающий курсор после статуса */
+  .blink { -webkit-animation: blink 1s steps(1) infinite; animation: blink 1s steps(1) infinite; }
+  @-webkit-keyframes blink { 50% { opacity: 0; } }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="glow"></div>
+<div id="lines"></div>
+
+<div id="wrap">
+  <div id="title"><span class="z">Z</span>-OLD</div>
+  <div id="sub">СТАРЫЙ ZCITY <span class="year">2025</span></div>
+  <div id="server">Подключение к серверу...</div>
+
+  <div class="card">
+    Извините за <b>большой контент</b> — это всё из-за старых моделей ZCity :)<br>
+    Первый заход может занять несколько минут, дальше всё грузится из кэша.
+    <div class="small">Не закрывайте игру, даже если кажется, что загрузка зависла — она просто качает тяжёлые файлы.</div>
+  </div>
+
+  <div id="disclaimer">
+    <h3>ДИСКЛЕЙМЕР</h3>
+    <p>Z-OLD — фанатская сборка в стиле старого ZCity 2025 года. Мы не связаны с официальной командой Z-City.</p>
+    <p>Все модели, звуки и материалы принадлежат их авторам из Steam Workshop. Мы ничего не продаём и не выдаём чужое за своё.</p>
+    <p>Сервер некоммерческий и сделан для фана. Соблюдайте правила сервера и уважайте других игроков.</p>
+  </div>
+
+  <div id="tip"><span>Совет:</span> <span id="tipText" style="color:#c8c8d2;font-weight:normal">ESC → Discord — наш Discord-сервер.</span></div>
+
+  <div id="loader">
+    <div id="status"><span id="statusText">Загрузка</span><span class="blink">_</span><span class="pct" id="pct"></span></div>
+    <div id="file"></div>
+    <div id="bar"><div id="fill"></div></div>
+    <div id="footer">
+      <span class="ds">discord.gg/TUp3NEG68x</span> &nbsp;|&nbsp; <span id="map">карта: —</span>
+      <span class="by">by BobbiHenson</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Функции ниже вызывает сам Garry's Mod во время загрузки.
+  var total = 0, needed = 0;
+
+  function setText(id, t) { var e = document.getElementById(id); if (e) e.innerHTML = t; }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function updateBar() {
+    if (total <= 0) return;
+    var done = Math.max(0, total - needed);
+    var p = Math.min(100, Math.round(done / total * 100));
+    document.getElementById("fill").style.width = p + "%";
+    setText("pct", p + "%  (" + done + " / " + total + ")");
+  }
+
+  function GameDetails(servername, serverurl, mapname, maxplayers, steamid, gamemode) {
+    setText("server", esc(servername || "Z-OLD"));
+    setText("map", "карта: " + esc(mapname || "—"));
+  }
+  function SetFilesTotal(t) { total = t; updateBar(); }
+  function SetFilesNeeded(n) { needed = n; updateBar(); }
+  function DownloadingFile(f) {
+    setText("statusText", "Скачивание контента");
+    setText("file", esc(f));
+    needed = Math.max(0, needed - 1);
+    updateBar();
+  }
+  function SetStatusChanged(s) {
+    var map = {
+      "Retrieving server info": "Получаем информацию о сервере",
+      "Sending client info": "Отправляем данные клиента",
+      "Workshop Complete": "Workshop загружен",
+      "Client info sent!": "Данные отправлены",
+      "Starting Lua...": "Запуск Lua...",
+      "Mounting Addons": "Подключаем аддоны",
+      "Loading Lua...": "Загрузка Lua..."
+    };
+    setText("statusText", esc(map[s] || s));
+    if (s === "Sending client info" || s === "Starting Lua...") {
+      document.getElementById("fill").style.width = "100%";
+    }
+  }
+
+  // советы меняются каждые 7 секунд
+  var tips = [
+    "ESC → Discord — наш Discord-сервер.",
+    "В ESC-меню справа можно переключить язык: RU / EN.",
+    "Tab — список игроков, ПКМ по игроку — аккаунт и медали.",
+    "После смерти нажми F, чтобы простить игрока.",
+    "!rtv в чат — голосование за смену карты.",
+    "В Point Shop покупаются вещи для внешности за очки за раунды."
+  ];
+  var tipIndex = 0;
+  setInterval(function () {
+    tipIndex = (tipIndex + 1) % tips.length;
+    setText("tipText", tips[tipIndex]);
+  }, 7000);
+</script>
+</body>
+</html>
